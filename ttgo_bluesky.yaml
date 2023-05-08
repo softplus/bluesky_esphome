@@ -1,0 +1,225 @@
+substitutions:
+  <<: !include secrets.yaml
+  <<: !include secrets.bluesky.yaml
+
+esphome:
+  name: ttgo_bluesky
+  platform: ESP32
+  board: nodemcu-32s
+  includes:
+   - bluesky.h # most of the code
+
+wifi:
+  ssid: ${wifi_ssid}
+  password: ${wifi_password}
+  fast_connect: on
+  power_save_mode: none
+
+captive_portal:
+
+logger:
+  level: VERBOSE # VERY_VERBOSE
+
+api:
+
+ota:
+
+font:
+  # Download Roboto-Medium.ttf from https://fonts.google.com/specimen/Roboto
+  # Some selected sizes, YMMV
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_48
+    size: 48
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_40
+    size: 40
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_32
+    size: 32
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_24
+    size: 24
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_20
+    size: 20
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_16
+    size: 16
+  - file: "fonts/Roboto-Medium.ttf"
+    glyphs: " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+    id: font_12
+    size: 12
+
+color: # some selection
+  - id: color_red
+    hex: FF0000
+  - id: color_green
+    hex: 00FF00
+  - id: color_blue
+    hex: 0000FF
+  - id: color_yellow
+    hex: FFFF00
+  - id: color_cyan
+    hex: 0077FF
+  - id: color_orange
+    hex: FF7700
+  - id: color_white
+    hex: FFFFFF
+
+# SPI used for the display
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO19
+
+# Display setup
+display:
+  - platform: st7789v
+    model: TTGO TDisplay 135x240
+    id: st7789vdisplay
+    backlight_pin: GPIO4
+    cs_pin: GPIO5
+    dc_pin: GPIO16
+    rotation: 90°
+    reset_pin: GPIO23
+    lambda: |-
+      it.strftime(4, 0, id(font_16), color_red, TextAlign::TOP_LEFT, "%H:%M", id(esptime).now());
+      it.printf(64,  0, id(font_16), color_red, "%s", id(bs_user_handle).c_str());
+      it.printf(4,  18, id(font_16), color_yellow, "%s", (id(bs_post_name) + " (" + id(bs_post_handle) + ")").c_str());
+      if (!id(bs_post_text).empty()) { // word-wrap post text
+        int x=4, y = 36, x_max = 240-4, y_max = 135, y_step = 22;
+        std::string line = "";
+        for (auto &word : id(bs_disp_words)) {
+          if (y>y_max) break;
+          if (line.empty()) {
+            line = word;
+          } else {
+            std::string test_line = line + " " + word;
+            int b_x, b_y, b_w, b_h;
+            it.get_text_bounds(x, y, test_line.c_str(), id(font_20), TextAlign::TOP_LEFT, 
+              &b_x, &b_y, &b_w, &b_h);
+            if ( (b_w + b_x) > x_max) { // line wrap
+              it.print(x, y, id(font_20), color_white, line.c_str());
+              line = word;
+              y += y_step;
+            } else {
+              line = test_line;
+            }
+          }
+        } 
+        if (y<y_max && !line.empty()) {
+          it.print(x, y, id(font_20), color_white, line.c_str());
+        }
+      }
+
+switch:
+  - platform: gpio
+    name: "Onboard LED"
+    pin: 2
+
+sensor:
+  - platform: wifi_signal
+    id: wifi_rssi
+    name: "WiFi RSSI"
+    update_interval: 60s
+
+  - platform: template
+    name: "Bluesky Unread"
+    lambda: if (id(bs_logged_in)) return id(bs_has_unread); else return {};
+
+text_sensor:
+  - platform: template
+    name: "Bluesky Handle"
+    lambda: if (id(bs_logged_in)) return id(bs_user_handle); else return {};
+  - platform: template
+    name: "Bluesky Top Name"
+    lambda: if (id(bs_logged_in)) return id(bs_post_name); else return {};
+  - platform: template
+    name: "Bluesky Top Text"
+    lambda: if (id(bs_logged_in)) return id(bs_post_text); else return {};
+
+
+# globals used for the code
+globals:
+  - id: bs_logged_in
+    type: boolean
+    initial_value: 'false'
+  - id: bs_user_did
+    type: std::string
+  - id: bs_user_handle
+    type: std::string
+  - id: bs_user_auth
+    type: std::string
+  - id: bs_has_unread
+    type: int
+  - id: bs_server_host
+    type: std::string
+    initial_value: '"https://bsky.social/"'
+  - id: bs_post_handle
+    type: std::string
+  - id: bs_post_name
+    type: std::string
+  - id: bs_post_date
+    type: std::string
+  - id: bs_post_text
+    type: std::string
+  - id: bs_disp_lines
+    type: std::vector<std::string>
+  - id: bs_disp_words
+    type: std::vector<std::string>
+
+http_request:
+  id: http_request_data
+  useragent: esphome/softplus
+  timeout: 10s
+
+binary_sensor: # used to try things out, not needed today
+  - platform: gpio
+    pin: 
+      number: 0
+      inverted: True
+      mode: INPUT_PULLUP
+    name: left_button
+    on_click:
+      - logger.log: "Left Click"
+  - platform: gpio
+    pin: 
+      number: 35
+      inverted: True
+    name: right_button
+    on_click:
+      - logger.log: "Right Click"
+
+time:
+  - platform: homeassistant
+    id: esptime
+    on_time_sync: # proxy for "wifi is working"
+      then:
+        - lambda: |-
+            if (!id(bs_logged_in)) {
+              boolean ok = bluesky_login(to_string("${bluesky_account}"), 
+                                to_string("${bluesky_token}"));
+              if (!ok) {
+                ESP_LOGD("Startup", "Can't login to bluesky");
+              } else {
+                std::map<std::string, std::string> po = bluesky_get_pops(true);
+                (void)bluesky_check_unread();
+              }
+            }
+
+interval:
+  - interval: 1min
+    then:
+      - lambda: |-
+          if (id(bs_logged_in)) { // requires first login attempt to have worked
+            std::map<std::string, std::string> po = bluesky_get_pops(true);
+            (void)bluesky_check_unread();
+            if (!po["error"].empty()) {
+              bluesky_login(to_string("${bluesky_account}"), to_string("${bluesky_token}"));
+            } // retries after 1 minute, that's fine
+          }
