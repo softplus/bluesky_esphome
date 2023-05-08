@@ -2,7 +2,9 @@
 
 Basic ESPHOME / c++ / ESP32 configuration to display some Bluesky / atproto content
 
-Copyright (c) 2023 John Mueller - https://github.com/softplus - https://johnmu.com/ - https://staging.bsky.app/profile/did:plc:7gokebwtnp56e7ngbepyamnr
+Copyright (c) 2023 John Mueller
+
+[github](https://github.com/softplus) - [blog](https://johnmu.com/) - [Bluesky](https://staging.bsky.app/profile/did:plc:7gokebwtnp56e7ngbepyamnr)
 
 MIT license
 
@@ -11,19 +13,19 @@ MIT license
 [ESPHOME](https://esphome.io/) is a framework for creating ESP-32 and ESP-8266 IoT devices. It integrates well with [Home Assistant](https://www.home-assistant.io/).
 [Installing and setting up](https://esphome.io/guides/installing_esphome.html) is well-documented (and I'm lazy).
 
-You program the devices using a "yaml" file. In this case, we have a bunch of c++ code in the yaml file too.
+The devices are programmed using a "yaml" file. In this case, we have a bunch of c++ code in the yaml file too.
 
 # Hardware
 
 The file here was created for LILYGO [TTGO T-Display](https://www.lilygo.cc/products/lilygo%C2%AE-ttgo-t-display-1-14-inch-lcd-esp32-control-board) boards. They're either battery or USB-C powered. You program them via USB.
 
-You can get them in various places, including [Aliexpress](https://s.click.aliexpress.com/e/_DCHPZAZ) - they're around USD 15.00. 
+You can get them in various places, including [Aliexpress](https://s.click.aliexpress.com/e/_DCHPZAZ) - they're around USD 8 - 15.00. 
 
 # Configuration
 
 Copy `secrets-example.yaml` to `secrets.yaml`, and `secrets-example.bluesky.yaml` to `secrets.bluesky.yaml`. These are the configuration files.
 
-Edit the files in a text edit:
+Edit the files in a text editor:
 
 * `secrets.yaml`: Set `wifi_ssid` and `wifi_password`, you can leave the rest as-is.
 * Get an app password in Bluesky: "Settings" / "App passwords" / "Add App Password". 
